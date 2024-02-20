@@ -1,0 +1,131 @@
+version: '3.8'
+services:
+  api:
+    image: kubedevio/pedelogo-catalogo:v1.0.0
+    ports:
+      - "8080:80"
+    volumes:
+      - "./logs/api:/log"
+    networks:
+      - pedelogo
+    depends_on:
+      - pedelogo-mongodb
+    environment:
+      Mongo__Host: "pedelogo-mongodb"
+      Mongo__User: "mongouser"
+      Mongo__Password: "mongopwd"
+      Mongo__Port: "27017"
+      Mongo__Database: "admin"
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: example
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    ports:
+      - '3306:3306'
+    networks:
+      - pedelogo
+
+  mysqlexporter:
+    image: prom/mysqld-exporter:master
+    ports: 
+    - "9104:9104"
+    networks:
+      - pedelogo
+    environment: 
+    - "DATA_SOURCE_NAME=root:admin(mysql:3306)/example"
+  
+  mongoexporter:
+    image: fabricioveronez/mongo_exporter
+    ports:
+      - "9216:9216"
+    networks:
+      - pedelogo
+    depends_on:
+      - pedelogo-mongodb
+    environment:
+      MONGODB_URI: "mongodb://mongouser:mongopwd@pedelogo-mongodb:27017"
+
+  pedelogo-mongodb:
+    image: mongo:4.1
+    networks:
+      - pedelogo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongouser
+      MONGO_INITDB_ROOT_PASSWORD: mongopwd
+
+  grafana:
+    image: grafana/grafana
+    networks:
+      - pedelogo
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+  
+  prometheus:
+    image: prom/prometheus:v2.24.1
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./alert.rules.yaml:/etc/prometheus/alert.rules
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+    networks:
+      - pedelogo
+
+  alertmanager:
+    image: prom/alertmanager:v0.21.0
+    ports: 
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yaml:/prometheus/alertmanager.yml
+    command: 
+      - '--config.file=/prometheus/alertmanager.yml'
+    networks:
+      - pedelogo
+  
+  loki:
+    image: grafana/loki:master
+    ports:
+      - "3100:3100"
+    command: 
+      - -config.file=/etc/loki/local-config.yaml
+      - -print-config-stderr=true
+    networks:
+      - pedelogo
+
+  promtail:
+    image: grafana/promtail:2.0.0
+    ports:
+      - "9080:9080"
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - "./promtail/config.yaml:/etc/promtail/config.yml"
+      - "./logs/api:/logs/api"
+      - "./tmp:/tmp"
+    networks:
+      - pedelogo
+    
+  jaeger:
+    image: jaegertracing/all-in-one:1.28
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "16686:16686"
+      - "14268:14268"
+      - "9411:9411"
+  
+volumes:
+  grafana_data:
+  
+networks:
+  pedelogo:
+    driver: bridge

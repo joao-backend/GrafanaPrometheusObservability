@@ -1,0 +1,29 @@
+global:
+route:
+  receiver: Default
+  group_by: ['alertname']
+  group_wait: 15s
+  group_interval: 15s
+  repeat_interval: 1m
+
+  routes:
+  - receiver: AlertaDatabase
+    match:
+      team: mongodb
+  
+  - receiver: AlertaWebApi
+    match:
+      team: webapi
+
+receivers:
+- name: Default
+  webhook_configs:
+  - url: 'https://webhook.site/b097fb07-b2ff-4e9c-9567-1aec6a2ac767'
+
+- name: AlertaDatabase
+  webhook_configs:
+  - url: 'https://webhook.site/b097fb07-b2ff-4e9c-9567-1aec6a2ac767'
+
+- name: AlertaWebApi
+  webhook_configs:
+  - url: 'https://webhook.site/b097fb07-b2ff-4e9c-9567-1aec6a2ac767'

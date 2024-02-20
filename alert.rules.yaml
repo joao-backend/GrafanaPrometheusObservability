@@ -1,0 +1,22 @@
+groups:
+- name: MongoDB
+  rules:
+  - alert: MongoDBAlert
+    expr: rate(mongodb_op_counters_total{type="query"}[10m]) > 0.15
+    for: 5s
+    labels:
+      team: mongodb
+    annotations:
+      titulo: "Muitas consultas"
+      descicao: "O {{ $labels.instance }} está com muitas consultas"
+
+- name: WebApi
+  rules:
+  - alert: WebApiMuitosAcessos
+    expr: sum(rate(http_requests_received_total[1m])) > 1
+    for: 30s
+    labels:
+      team: webapi
+    annotations:
+      titulo: "Numero alto de acessos"
+      descicao: "O {{ $labels.instance }} está com um numero alto de acessos ({{ $value }}s)"
